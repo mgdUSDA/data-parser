@@ -16,6 +16,10 @@ When you click the **Knit** button a document will be generated that includes bo
 
 initial.env <- ls()
 
+# Load libraries
+
+library(dplyr)
+
 # Set working directory to the location of the script.
 
 mywd <- "C:/Martin/dataprocessing/R/Rrepo/data-parser"
@@ -30,6 +34,72 @@ if(!identical(mywd, currentdir)){
   cat("Working directory set to:", getwd(), "\n\n")
 }
 
+
+# Constants
+
+parserVersion = "LachatDriftCorrection.R"
+myFilters = Filters # Substitute .ps in original Filters array with .csv
+myFilters[3,1] = "Excel csv files (*.csv)"
+myFilters[3,2] = "*.csv"
+rownames(myFilters)[3] = "csv"
+
+# Set default data directory
+
+defaultdir <- "L:/LACHAT/Spokas/*.csv"
+
+# Choose data file from default directory or navigate to desired directory in the choose.files() dialog.
+
+  cat("Imported ECD data from:\n\n")
+  
+  infile = choose.files(defaultdir, filters = myFilters[c("csv","All"),], caption = "Choose Lachat datafile")
+  
+  lachatdata = read.csv(infile, header = TRUE, as.is = TRUE, strip.white = TRUE, blank.lines.skip = TRUE)
+
+df <- lachatdata
+
+  cat("Successfully read data from ", infile, "\n\n")
+
+# Set .csv output filename by adding the prefix "LDC_"" to the input filename. 
+
+# ************* Need to include the complete path in outfile
+  outfile <- paste("LDC_", sequenceName[[1]][4], sep = "")
+
+
+
+#  [1] "Sample.ID"             "Replicate.Number"      "Cup.Number"            "Detection.Date"        "Detection.Time"       
+#  [6] "Auto.Dilution.Factor"  "Analyte.Name"          "Peak.Area"             "Peak.Height"           "Peak.Concentration"   
+# [11] "Concentration.Units"   "Channel.Number"        "Analyte.Name.1"        "Peak.Area.1"           "Peak.Height.1"        
+# [16] "Peak.Concentration.1"  "Concentration.Units.1" "Channel.Number.1"      "Analyte.Name.2"        "Peak.Area.2"          
+# [21] "Peak.Height.2"         "Peak.Concentration.2"  "Concentration.Units.2" "Channel.Number.2"
+
+
+analytes <- df %>%
+              select(contains("Analyte")) %>%
+              unique() %>%
+              as.character()
+
+# Rename columns to include analyte name
+
+Area <- select(df, contains("Area"))
+Height <- select(df, contains("Height"))
+Channel <- select(df, contains("Channel"))
+Concentration <- select(df, contains("Concentration"))
+Units <- select(df, contains("Units"))
+
+names(Area) <- paste(analytes, "Area", sep = ".")
+names(Height) <- paste(analytes, "Height", sep = ".")
+names(Channel) <- paste(analytes, "Channel", sep = ".")
+names(Concentration) <- paste(analytes, "Concentration", sep = ".")
+names(Units) <- paste(analytes, "Units", sep = ".")
+
+tidy <- cbind(Area, Height, Concentration, Units, Channel)
+
+
+
+paste()
+  
+
+c(as.character(unique(select(lachatdata, contains("Analyte")))))
 
 
 ```
