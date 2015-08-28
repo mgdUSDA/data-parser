@@ -55,7 +55,8 @@ defaultdir <- "L:/LACHAT/Spokas/*.csv"
   
   lachatdata = read.csv(infile, header = TRUE, as.is = TRUE, strip.white = TRUE, blank.lines.skip = TRUE)
 
-df <- lachatdata
+df <- lachatdata %>%
+        select(contains(-c("Units"))
 
   cat("Successfully read data from ", infile, "\n\n")
 
@@ -83,7 +84,7 @@ analytes <- df %>%
 Area <- select(df, contains("Area"))
 Height <- select(df, contains("Height"))
 Channel <- select(df, contains("Channel"))
-Concentration <- select(df, contains("Concentration"))
+Concentration <- select(df, contains(c("Concentration", -"Units"))
 Units <- select(df, contains("Units"))
 
 names(Area) <- paste(analytes, "Area", sep = ".")
