@@ -15,7 +15,21 @@ When you click the **Knit** button a document will be generated that includes bo
 # Get list of object in the current Global Environment and make copies of any object that matches an object used in the LachatDriftCorrection.R
 
 initial.env <- ls()
-class(initial.env)
+
+# Set working directory to the location of the script.
+
+mywd <- "C:/Martin/dataprocessing/R/Rrepo/data-parser"
+
+# Store current working directory and restore setting when script is completed.
+
+currentdir <- getwd()
+
+if(!identical(mywd, currentdir)){
+  # Set working directory
+  setwd(mywd)
+  cat("Working directory set to:", getwd(), "\n\n")
+}
+
 
 
 ```
