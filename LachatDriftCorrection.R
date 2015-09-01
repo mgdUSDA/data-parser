@@ -1,18 +1,8 @@
----
-title: "Lachat NO3, NH3 PO3"
-author: "mdusaire"
-date: "Thursday, August 27, 2015"
-output: html_document
----
-
-This is a parser for correcting drift in Lachat NO3, NH3 and PO3 analyses.  It fits curve to the high calibration and check standards versus run position, then correct sample and check standard concentrations based on the fractional difference (usually a decrease) between the expected value and the measured area for the standard.
-
-For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r}
 # Get list of object in the current Global Environment and make copies of any object that matches an object used in the LachatDriftCorrection.R
+
+# To execute type: source("LachatDriftCorrection.R", print.eval = TRUE)
+
+
 
 # Load libraries
 
@@ -30,7 +20,7 @@ if(!identical(mywd, currentdir)){
   # Set working directory
   setwd(mywd)
   cat("Working directory set to:", getwd(), "\n\n")
-  }
+}
 
 
 # Constants
@@ -46,8 +36,6 @@ rownames(myFilters)[3] = "csv"
 defaultdir <- "L:/LACHAT/Spokas/*.csv"
 
 # Choose data file from default directory or navigate to desired directory in the choose.files() dialog.
-
-cat("Imported ECD data from:\n\n")
 
 infile = choose.files(defaultdir, filters = myFilters[c("csv","All"),], caption = "Choose Lachat datafile")
 
@@ -108,10 +96,10 @@ for (i in 1:length(analytes)){
   if (i == 1) {
     # Create new data frame for tidy data
     tidy <- analyteData
-    } else {
-      tidy <- rbind(tidy, analyteData)  
-      }
+  } else {
+    tidy <- rbind(tidy, analyteData)  
   }
+}
 
 # Correct analyte concentrations for sensitivity variations.  NO3 and PO4 may exhibit some peak area-height drift due to contamination in reagents or manifold lines.  Areas for the highest standard are adjusted as a function of run position.  Sample areas are adjusted according to a spline or polynomial fit of the standard drift.
 
@@ -123,16 +111,10 @@ write.csv(tidy, file = tidyOutfile, quote = FALSE, row.names = FALSE)
 write.csv(df, file = messyOutfile, quote = FALSE, row.names = FALSE)
 write.csv(dfLDC, file = LDCOutfile, quote = FALSE, row.names = FALSE)
 
+cat("Output data to \n\n", tidyOutfile, "\n", messyOutfile, "\n", LDCOutfile, "\n")
+
 
 # Clean up variables and detach libraries.
+
 rm(analytes, analyteData, currentdir, defaultdir, df, dfLDC, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, parserVersion, sampleInfo, tidy, tidyOutfile)
 detach("package:dplyr", unload=TRUE)
-```
-
-You can also embed plots, for example:
-
-```{r, echo=FALSE}
-plot(cars)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
