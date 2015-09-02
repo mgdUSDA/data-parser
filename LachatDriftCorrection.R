@@ -2,11 +2,10 @@
 
 # To execute type: source("LachatDriftCorrection.R", print.eval = TRUE)
 
-
-
 # Load libraries
 
 library(dplyr)
+library(ggplot2)
 
 # Set working directory to the location of the script.
 
@@ -25,6 +24,7 @@ if(!identical(mywd, currentdir)){
 
 # Constants
 
+driftThreshold = 0.1 # 10% drift
 parserVersion = "LachatDriftCorrection.R"
 myFilters = Filters # Substitute .ps in original Filters array with .csv
 myFilters[3,1] = "Excel csv files (*.csv)"
@@ -101,9 +101,54 @@ for (i in 1:length(analytes)){
   }
 }
 
+
 # Correct analyte concentrations for sensitivity variations.  NO3 and PO4 may exhibit some peak area-height drift due to contamination in reagents or manifold lines.  Areas for the highest standard are adjusted as a function of run position.  Sample areas are adjusted according to a spline or polynomial fit of the standard drift.
 
-dfLDC <- df
+dfLDC <- tidy
+
+# Convert SampleID to lower case and remove all blank spaces
+
+dfLDC$id <- tolower(dfLDC$SampleID)
+dfLDC$id <- gsub("\\s", "", dfLDC$id) 
+
+# Select 20ppm standards which will be used for drift correction if needed.
+
+
+Nitrate <- dfLDC[dfLDC$Analyte == "Nitrate",]
+Nitrate$index <- as.numeric(row.names(Nitrate))
+Nitrate20ppm <- Nitrate[grep("20ppm", Nitrate$id), c("index", "Concentration", "Area")]
+
+stdErr20ppm <- sd(Nitrate20ppm$Area) / Nitrate20ppm$Area[1]
+
+# Check if 20ppm standard areas change more than threshold value driftThreshold.
+
+cat("Drift correction threshold is ", driftThreshold, "\n\n")
+
+
+if (driftThreshold < stdErr20ppm) {
+  cat("Standard Error of 20ppm stds is ", stdErr20ppm,". Performing drift correction.\n\n")
+  
+  ggplot(Nitrate20ppm, aes(index, Concentration)) +
+    geom_smooth(method = "lm", formula = y ~ poly(x, nrow(Nitrate20ppm) - 2), se = FALSE) +
+    geom_point() +
+    coord_cartesian(ylim = c(min(Nitrate$Concentration), max(Nitrate$Concentration) * 1.1))
+
+  polyFit <- lm(Concentration ~ poly(index, nrow(Nitrate20ppm) - 2), data = Nitrate20ppm)
+  predFit <- predict(polyFit, data.frame(index = Nitrate$index)) # predict() requires new data be passed as a data frame with matching column name
+  correctionFactor <- Nitrate20ppm$Concentration[1] / predFit
+  correctionFactor[1] <- 1.0
+  Nitrate$LDC <- Nitrate$Concentration * correctionFactor
+  
+  # Set negative concentrations to zero
+  
+  Nitrate[Nitrate$LDC < 0, "LDC"] <- 0.0
+  dfLDC[row.names(Nitrate), "Concentration"] <- Nitrate$LDC
+  
+  rm(correctionFactor, polyFit, predFit)
+} else {
+  cat("Standard Error of 20ppm stds is ", stdErr20ppm, ". No drift correction necessary.\n\n")
+}
+
 
 # Store copies of tidy, messy and LDC data.
 
@@ -116,5 +161,6 @@ cat("Output data to \n\n", tidyOutfile, "\n", messyOutfile, "\n", LDCOutfile, "\
 
 # Clean up variables and detach libraries.
 
-rm(analytes, analyteData, currentdir, defaultdir, df, dfLDC, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, parserVersion, sampleInfo, tidy, tidyOutfile)
-detach("package:dplyr", unload=TRUE)
+rm(analytes, analyteData, currentdir, defaultdir, df, dfLDC, driftThreshold, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, Nitrate, Nitrate20ppm, parserVersion, sampleInfo, stdErr20ppm, tidy, tidyOutfile)
+detach("package:dplyr", unload = TRUE)
+detach("package:ggplot2", unload = TRUE)
