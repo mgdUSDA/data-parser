@@ -6,12 +6,49 @@
 
 library(dplyr)
 library(ggplot2)
+library(R2HTML)
+library(tcltk)
+
+
+# Constants
+rm(list = ls())
+
+driftThreshold = 0.1 # 10% drift
+parserVersion = "LachatDriftCorrection.R"
+myFilters = Filters # Substitute .ps in original Filters array with .csv
+myFilters[3,1] = "Excel csv files (*.csv)"
+myFilters[3,2] = "*.csv"
+rownames(myFilters)[3] = "csv"
+radiobuttondone <- tclVar(0)
+driftCorrect <- 2
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Function chooseUnits allows user to choose between concentration and
+# mass units for GHG amounts.  ppm are preferred for gas samples; ug for
+# insitu incubations.
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+doDriftCorrection = function(){
+  rbVal = as.numeric(tclvalue(rbValue))
+  tkdestroy(tt)
+  if (rbVal==1){
+    # No longer does anything.  Used to display these cutsie messages...      
+    # tkmessageBox(title = "Calibration mode:", message="Auto calibration?  Good luck!")
+  }
+  if (rbVal==2){
+    # tkmessageBox(title = "Calibration mode:", message="Manual calibration? Sorry about that.")
+  }
+  tclvalue(radiobuttondone) <- 1
+  driftCorrect <<- rbVal
+}# End of function chooseUnits
+
 
 # Set working directory to the location of the script.
 
 mywd <- "C:/Martin/dataprocessing/R/Rrepo/data-parser"
 
 # Store current working directory and restore setting when script is completed.
+
 
 currentdir <- getwd()
 
@@ -21,15 +58,6 @@ if(!identical(mywd, currentdir)){
   cat("Working directory set to:", getwd(), "\n\n")
 }
 
-
-# Constants
-
-driftThreshold = 0.1 # 10% drift
-parserVersion = "LachatDriftCorrection.R"
-myFilters = Filters # Substitute .ps in original Filters array with .csv
-myFilters[3,1] = "Excel csv files (*.csv)"
-myFilters[3,2] = "*.csv"
-rownames(myFilters)[3] = "csv"
 
 # Set default data directory
 
@@ -41,6 +69,10 @@ infile = choose.files(defaultdir, filters = myFilters[c("csv","All"),], caption 
 
 lachatdata = read.csv(infile, header = TRUE, as.is = TRUE, strip.white = TRUE, blank.lines.skip = TRUE)
 
+# Only select rows that contain a valid Detection.Date
+
+lachatdata <- lachatdata[!(lachatdata$Detection.Date ==""),] 
+
 cat("Successfully read data from ", infile, "\n\n")
 
 # Make copy of data frame for processing purposes.
@@ -49,10 +81,16 @@ df <- lachatdata
 
 # Set output filenames by adding the suffix _tidy, _messy or _LDC to the input filename. 
 
-tidyOutfile <- paste(strsplit(infile, ".csv"), "_tidy.csv", sep = "")
-messyOutfile <- paste(strsplit(infile, ".csv"), "_messy.csv", sep = "")
-LDCOutfile <- paste(strsplit(infile, ".csv"), "_LDC.csv", sep = "")
+basefilepath <- strsplit(infile, ".csv")
+filename <- strsplit(infile, "\\\\")[[1]][length(strsplit(infile, "\\\\")[[1]])]
 
+tidyOutfile <- paste(basefilepath, "_tidy.csv", sep = "")
+messyOutfile <- paste(basefilepath, "_messy.csv", sep = "")
+LDCOutfile <- paste(basefilepath, "_LDC.csv", sep = "")
+
+HTMLoutput <- paste(basefilepath, "_report.html", sep = "")
+HTML.title(paste("Lachat Drift Correction Report for ", filename, sep=""), Align = "center", HR=3, file=HTMLoutput)
+HTML.title(Sys.time(), Align = "center", HR=4, file=HTMLoutput)
 
 # Column names for raw lachat data:
 #
@@ -111,56 +149,107 @@ dfLDC <- tidy
 dfLDC$id <- tolower(dfLDC$SampleID)
 dfLDC$id <- gsub("\\s", "", dfLDC$id) 
 
-# Select 20ppm standards which will be used for drift correction if needed.
+# Select 20ppm standards which will be used for drift correction if needed. 
 
 
 Nitrate <- dfLDC[dfLDC$Analyte == "Nitrate",]
 Nitrate$index <- as.numeric(row.names(Nitrate))
-Nitrate20ppm <- Nitrate[grep("20ppm", Nitrate$id), c("index", "Concentration", "Area")]
-
-stdErr20ppm <- sd(Nitrate20ppm$Area) / Nitrate20ppm$Area[1]
-
-# Check if 20ppm standard areas change more than threshold value driftThreshold.
-
-cat("Drift correction threshold is ", driftThreshold, "\n\n")
+Nitrate20ppm <- filter(Nitrate, grepl("S", CupNumber) & grepl("20", id) & !grepl("po4", id))
 
 
-if (driftThreshold < stdErr20ppm) {
-  cat("Standard Error of 20ppm stds is ", stdErr20ppm,". Performing drift correction.\n\n")
+# There need to be at least 2 standards in order to perform the drift correction.
+
+if (nrow(Nitrate20ppm) > 1) {
+  # Calculate standard error for the standards
+
+  stdErr20ppm <- mean(Nitrate20ppm$Concentration, na.rm = TRUE) / Nitrate20ppm$Concentration[1]
   
-  ggplot(Nitrate20ppm, aes(index, Concentration)) +
-    geom_smooth(method = "lm", formula = y ~ poly(x, nrow(Nitrate20ppm) - 2), se = FALSE) +
-    geom_point() +
-    coord_cartesian(ylim = c(min(Nitrate$Concentration), max(Nitrate$Concentration) * 1.1))
+  # Calculate polynomial order
+  
+  polyOrder <- min(nrow(Nitrate20ppm) - 1, 3)
+  
+  # Check if 20ppm standard areas change more than threshold value driftThreshold.
+  
+  cat("Drift correction threshold is", driftThreshold, "\n\n", "20ppm standard error is", stdErr20ppm, "\n\n") 
+  
+  
+  if (driftThreshold < stdErr20ppm) {
+    
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    # Choose whether to perform drift correction or not
+    #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    
+    driftCorrect = NA
+    tt <- tktoplevel()
+    tktitle(tt) <- "Perform drift correction?"
+    rb1 <- tkradiobutton(tt)
+    rb2 <- tkradiobutton(tt)
+    rbValue <- tclVar(1)
+    tkconfigure(rb1,variable=rbValue,value=1)
+    tkconfigure(rb2,variable=rbValue,value=2)
+    tkgrid(tklabel(tt,text="Perform drift correction:"))
+    tkgrid(tklabel(tt,text="Yes"),rb1)
+    tkgrid(tklabel(tt,text="No"),rb2)
+    OK.but <- tkbutton(tt, text="OK", command = doDriftCorrection)
+    tkgrid(OK.but)
+    tkfocus(tt)
+    tkwait.variable(radiobuttondone)
+    
+    if (driftCorrect == 1) {
+      polyFit <- lm(Concentration ~ poly(index, polyOrder), data = Nitrate20ppm)
+      windows()
+      ggplot(Nitrate20ppm, aes(index, Concentration)) +
+        geom_smooth(method = "lm", formula = y ~ poly(x, polyOrder), se = FALSE) +
+        geom_point() +
+        coord_cartesian(ylim = c(min(Nitrate$Concentration), max(Nitrate$Concentration) * 1.1))
+      graphpath <- paste(basefilepath, ".png", sep = "" )
+      ggsave(graphpath)
+      pngName <- strsplit(graphpath, "\\\\")[[1]][length(strsplit(graphpath, "\\\\")[[1]])]
+      dev.off()
 
-  polyFit <- lm(Concentration ~ poly(index, nrow(Nitrate20ppm) - 2), data = Nitrate20ppm)
-  predFit <- predict(polyFit, data.frame(index = Nitrate$index)) # predict() requires new data be passed as a data frame with matching column name
-  correctionFactor <- Nitrate20ppm$Concentration[1] / predFit
-  correctionFactor[1] <- 1.0
-  Nitrate$LDC <- Nitrate$Concentration * correctionFactor
+      HTML("<hr>",file=HTMLoutput)
+      HTMLInsertGraph(pngName, file=HTMLoutput, GraphBorder = 3, Align = "center")
+      HTML(summary.lm(polyFit), file=HTMLoutput)
+      HTML("Fitted standard values:", file = HTMLoutput)
+      
+      predFit <- predict(polyFit, data.frame(index = Nitrate$index)) # predict() requires new data be passed as a data frame with matching column name
+      correctionFactor <- Nitrate20ppm$Concentration[1] / predFit
+      correctionFactor[1] <- 1.0
+      Nitrate$LDC <- Nitrate$Concentration * correctionFactor
+      
+      # Set negative concentrations to zero
+      
+      Nitrate[Nitrate$LDC < 0, "LDC"] <- 0.0
+      dfLDC[row.names(Nitrate), "Concentration"] <- Nitrate$LDC
+      
+      # Output drift corrected data
+      
+      write.csv(dfLDC, file = LDCOutfile, quote = FALSE, row.names = FALSE)
+    } else {
+      cat("Standard Error of 20ppm stds is ", stdErr20ppm, "but, no drift correction performed.\n\n")
+    }
+  } else {
+    cat("Standard Error of 20ppm stds is ", stdErr20ppm, ". No drift correction necessary.\n\n")
+  }
   
-  # Set negative concentrations to zero
-  
-  Nitrate[Nitrate$LDC < 0, "LDC"] <- 0.0
-  dfLDC[row.names(Nitrate), "Concentration"] <- Nitrate$LDC
-  
-  rm(correctionFactor, polyFit, predFit)
 } else {
-  cat("Standard Error of 20ppm stds is ", stdErr20ppm, ". No drift correction necessary.\n\n")
+  cat("There were less than 2 standards required for drift correction.  No drift correction performed.\n\n")
 }
-
-
 # Store copies of tidy, messy and LDC data.
 
 write.csv(tidy, file = tidyOutfile, quote = FALSE, row.names = FALSE)
 write.csv(df, file = messyOutfile, quote = FALSE, row.names = FALSE)
-write.csv(dfLDC, file = LDCOutfile, quote = FALSE, row.names = FALSE)
-
-cat("Output data to \n\n", tidyOutfile, "\n", messyOutfile, "\n", LDCOutfile, "\n")
 
 
-# Clean up variables and detach libraries.
-
-rm(analytes, analyteData, currentdir, defaultdir, df, dfLDC, driftThreshold, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, Nitrate, Nitrate20ppm, parserVersion, sampleInfo, stdErr20ppm, tidy, tidyOutfile)
-detach("package:dplyr", unload = TRUE)
-detach("package:ggplot2", unload = TRUE)
+cat("Output data to \n\n", tidyOutfile, "\n", messyOutfile, "\n")
+if (driftCorrect == 1) {
+  cat(LDCOutfile, "\n")
+#  rm(correctionFactor, polyFit, predFit, analytes, analyteData, currentdir, defaultdir, df, dfLDC, driftCorrect, doDriftCorrection, driftThreshold, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, Nitrate, Nitrate20ppm, OK.but, parserVersion, polyOrder, radiobuttondone, rb1, rb2, rbValue, sampleInfo, tidy, tidyOutfile, tt)
+} else {
+#  rm(analytes, analyteData, currentdir, defaultdir, df, dfLDC, driftCorrect, doDriftCorrection, driftThreshold, i, infile, lachatdata, LDCOutfile, messyOutfile, myFilters, mywd, Nitrate, Nitrate20ppm, parserVersion, radiobuttondone, sampleInfo, tidy, tidyOutfile)
+} 
+  
+# detach("package:dplyr", unload = TRUE)
+# detach("package:ggplot2", unload = TRUE)
+# detach("package:R2HTML", unload = TRUE)
+# detach("package:tcltk", unload = TRUE)
