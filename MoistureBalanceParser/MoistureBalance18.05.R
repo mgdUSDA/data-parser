@@ -825,6 +825,16 @@ for (f in xxx.txt) {
               for (p in 1:nModels) {
                 HTML(paste("Model summary for the ",  corrDF$modelNames[p]), file = HTMLoutput)
                 HTML(summary(get(corrDF$modelAbbr[p])[[1]]), file = HTMLoutput)
+                
+                # Extract and collate parameters from nls() and lm() fits
+                print(summary(get(corrDF$modelAbbr[p])[[1]])$Formula)
+                ffff <- summary(get(corrDF$modelAbbr[p])[[1]])$formula
+                
+                pppp <- summary(get(corrDF$modelAbbr[p])[[1]])$parameters
+                
+                paste("formula:", ffff[3])
+                
+                print(str(coef(get(corrDF$modelAbbr[p])[[1]])))
                 HTML(paste("Pearson's correlation: ", corrDF$corr[p]), file = HTMLoutput)
                 HTML("<hr>", file = HTMLoutput)                
                }
