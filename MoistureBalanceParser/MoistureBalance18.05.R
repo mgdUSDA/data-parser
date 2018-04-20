@@ -46,12 +46,12 @@ logTime <- Sys.time()
 todaysdate <- date()
 modelAbbr <- c("Ex","HP", "Le", "Li", "Lo", "Loga", "MHP", "MP", "MPII", "Pa", "SF", "Tt", "WS")
 modelParameterList <- c("a", "b", "c", "d", "e", "k", "ka", "kb", "kc", "kd", "ke", "n", "m", "p", "q", "D", "L", "V", "T")
-modelEstimates <- array(data = NA, dim = length(modelParameterList))
+modelEstimates <- data.frame(matrix(data = NA, nrow = 1, ncol = length(modelParameterList)))
+colnames(modelEstimates) <- modelParameterList
 modelPr.gt.ts <- modelEstimates
 modelStdErrors <- modelEstimates
 modeltValues <- modelEstimates
-names(modelEstimates) <- modelParameterList
-nModels = 3  # Plot and report model results from the top nModels based on cor(moisutre, fit)
+nModels = 13  # Plot and report model results from the top nModels based on cor(moisutre, fit)
 
 
 
@@ -218,22 +218,22 @@ fitData <- function() {
   moisture <- m
 }
 
-Exp_fit <- function(time,moisture) {
+Exp_fit <- function(time, moisture) {
   nonZero <- which(moisture > 0)
   moistureNZ <- moisture[nonZero]
-  timeNZ <- time[nonZero]
-  tryResult <- tryCatch(lm(log(moistureNZ) ~ timeNZ),
+  time <- time[nonZero]
+  tryResult <- tryCatch(lm(log(moistureNZ) ~ time),
                         error=function(e) {
                           print(e)
                           print(strsplit(as.character(e), ":")[[1]][2])
                         }
   )
   if (class(tryResult) == "lm") {
-    model <- lm(log(moistureNZ) ~ timeNZ)
+    model <- lm(log(moistureNZ) ~ time)
     Ex <- exp(predict(model))
     # plot(timeNZ, moistureNZ, pch = 16, cex = 1.3, col = "blue", main = "Exponential Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(timeNZ, Ex, lty=2, col="red", lwd=3)
-    t <- timeNZ
+    t <- time
     rsq <- as.numeric(cor(moistureNZ, Ex))
     err <- NA
   } else {
@@ -245,7 +245,7 @@ Exp_fit <- function(time,moisture) {
   return(list(model, t, rsq, err))
 }
 
-HendersonPabis_fit <- function(time,moisture) {
+HendersonPabis_fit <- function(time, moisture) {
   tryResult <- tryCatch(nls(moisture ~ a * exp(-k * time), start = list(a = 0.8, k = 0.5)),
                         error=function(e) {
                           print(e)
@@ -870,9 +870,9 @@ for (f in xxx.txt) {
                 modeltValues[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[3]]
                 modelPr.gt.ts[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[4]]
                 
-                names(modelStdErrors) <- paste("Pr.gt.t_", names(modelStdErrors), sep = "")
-                names(modeltValues) <- paste("Pr.gt.t_", names(modeltValues), sep = "")
-                names(modelPr.gt.ts) <- paste("Pr.gt.t_", names(modelPr.gt.ts), sep = "")
+                colnames(modelStdErrors) <- paste("StdError_", colnames(modelStdErrors), sep = "")
+                colnames(modeltValues) <- paste("tValue_", colnames(modeltValues), sep = "")
+                colnames(modelPr.gt.ts) <- paste("Pr.gt.t_", colnames(modelPr.gt.ts), sep = "")
                 
                 # This generates a dataframe with rownames = model parameter names
                 
@@ -882,13 +882,14 @@ for (f in xxx.txt) {
                 dryProfile <- dryingProfile[i]
                 modelAbb <- corrDF$modelAbbr[p]
                 modelName <- corrDF$modelNames[p]
-                modelCorr <-  round(as.numeric(corrDF$corr[p]), 8)
+                modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
                 parserVer <- paste(parserID, parserVersion, sep = "")
-                modelError <- "none"
+                modelError <- get(corrDF$modelAbbr[p])[[4]]
                 
                 modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, finalTemp, sampleMoisture, modelAbb, modelName,
                                               modelCorr, modelEquation,
                                               modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
+                
                 
                 if (is.null(modelResults)) {
                   modelResults <- modelResultsNew
