@@ -62,14 +62,14 @@ modelResultsList <- c("date", "time", "datafile", "sample", "dryingProfile", "fi
                       paste("tValue_", modelParameterList, sep = ""),
                       paste("Pr.gt.t_", modelParameterList, sep = ""),
                       "parserVersion", "fitError"
-                      )
+)
 
 modelNames <- c("Exponential Fit", "Henderson Pabis Fit", "Lewis Fit", "Linear Fit", "Logarithmic Fit", "Logarithmic Fit (Yagcioglu et al. 1999)",
                 "Modified Henderson Pabis Fit", "Modified Page Fit", "Modified Page II Fit", "Page Fit", "Simplified Fick Diffusion Fit",
                 "Two-Term Fit (Henderson 1974)", "Wang and Singh Fit")
 modelFormula <- c("log(moisture) ~ a * time + b", "moisture ~ a * exp(-k * time)", "moisture ~ exp(-k * time)", "moisture ~ a * time + b", "exp(moisture) ~ a * time + b",
                   "moisture ~ a * exp(-k * time) + c", "moisture ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time)", "moisture ~ exp(-(k * time) ^ n)",
-                  "moisture ~ exp(-(k * (time / L ^ 2) ^ n)", "(moisture ~ exp(-k * time ^ n", "moisture ~ a * exp((-c * time) / L ^ 2",
+                  "moisture ~ exp(-k * (time / L ^ 2) ^ n)", "moisture ~ exp(-k * time ^ n)", "moisture ~ a * exp((-c * time) / L ^ 2)",
                   "moisture ~ a * exp(-ka * time) + b * exp(-kb * time)", "moisture ~ 1 + a * time + b * time ^ 2")
 radiobuttondone <- tclVar(0)
 
@@ -245,7 +245,7 @@ Exp_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult     
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -269,7 +269,7 @@ HendersonPabis_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult     
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -293,7 +293,7 @@ Lewis_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult     
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -317,7 +317,7 @@ Linear_fit <- function(time,moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult  
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -343,7 +343,7 @@ Log_fit <- function(time,moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult  
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -367,7 +367,7 @@ Logarithmic_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult    
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -391,7 +391,7 @@ ModifiedHendersonPabis_fit <- function(time,moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult 
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -415,7 +415,7 @@ ModifiedPage_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -439,7 +439,7 @@ ModifiedPageII_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -463,7 +463,7 @@ Page_fit <- function(time,moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult     
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -487,7 +487,7 @@ SimplifiedFick_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -511,7 +511,7 @@ TwoTerm_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -535,7 +535,7 @@ WangSingh_fit <- function(time, moisture) {
     model <- NA
     t <- NA
     rsq <- NA
-    err <- tryResult
+    err <- gsub("[\r\n]", "", tryResult)
   }
   return(list(model, t, rsq, err))
 }
@@ -636,7 +636,7 @@ for (f in xxx.txt) {
   infile <- paste(dataFolder, f, sep = "/")
   if (file.info(infile)$size > 0) {
     MBData <- read.csv(infile, sep = "\t", header = FALSE, as.is = TRUE, strip.white = TRUE, blank.lines.skip = TRUE)
-
+    
     # There may still be other .txt files in the directory that do not contain Ohaus MB45 data.
     # Look for specific text in line 2 of the .txt file.  Hopefully this elimiates non-data files.
     
@@ -672,7 +672,7 @@ for (f in xxx.txt) {
             
             # Proceed with data processing if there are 2 or more data points
             
-
+            
             predictDF <- NULL
             predictDFW <- NULL
             predictNext <- NULL
@@ -791,7 +791,7 @@ for (f in xxx.txt) {
                   }
                 }
               }
-
+              
               # Tabulate long data frame with data for top nModels for plotting.
               
               for (p in 1:nModels) {
@@ -808,7 +808,7 @@ for (f in xxx.txt) {
               # Append raw data to predictDFW
               
               predictDFW <- cbind(predictDFW, raw = rawData$MR)
-
+              
               tMax <- max(predictDF$time, na.rm = TRUE)
               mMax <- max(predictDF$MR, na.rm = TRUE)          
               
@@ -845,7 +845,7 @@ for (f in xxx.txt) {
                 annotate("text", label = lFinal, x = 0.9 * tMax, y = 1.2 * mMax, size = 5, hjust = "right") 
               print(g)
               dev.off()
-
+              
               HTML("", append = FALSE, file = HTMLoutput)
               HTML.title(paste("Regression summary info for ", fName, sep = ""), Align = "center", HR = 3, file = HTMLoutput)
               HTML.title(Sys.time(), Align = "center", HR = 4, file = HTMLoutput)
@@ -862,66 +862,74 @@ for (f in xxx.txt) {
                 
                 print(paste("Model data for",corrDF$modelAbbr[p]))
                 
-                modelParams <- summary(get(corrDF$modelAbbr[p])[[1]])$coefficients
-                switch(corrDF$modelAbbr[p][[1]],
-                       
-                       # models generated by lm()
-                       
-                       "Ex" = {
-                         print("Exponential fit found...")
-                         rownames(modelParams) <- c("b", "a")
-                       },
-                       
-                       "Li" = {
-                         print("Linear fit found...")
-                         rownames(modelParams) <- c("b", "a")
-                       },
-                       
-                       "Lo" = {
-                         print("Log function found...")
-                         rownames(modelParams) <- c("b", "a")
-                       },
-                       
-                       {
+                modelEquation <- modelFormula[corrDF$modelAbbr[p] == modelAbbr]
+                modelEstimates[] <- NA
+                modelStdErrors <- modelEstimates
+                modeltValues <- modelEstimates
+                modelPr.gt.ts <- modelEstimates
+                
+                
+                if (is.na(get(corrDF$modelAbbr[p])[[1]][1])) {
+                  
+                  # nls() reported model fitting error. Could be a result of zero moisture. Otherwise results left in initial state of NA.
+                  # Error message reported.
+                  
+                } else {
+                  
+                  modelParams <- summary(get(corrDF$modelAbbr[p])[[1]])$coefficients
+                  switch(corrDF$modelAbbr[p][[1]],
                          
-                         # models generated by nls()
-
-                       }
-                )
+                         # models generated by lm()
                          
-                         # The model parameters generated by summary() are:  Estimate, Std. Error, t value, Pr(>|t|)
+                         "Ex" = {
+                           print("Exponential fit found...")
+                           rownames(modelParams) <- c("b", "a")
+                         },
                          
-                         # modelParams <- summary(get(corrDF$modelAbbr[p])[[1]])$coefficients
-                        modelEquation <- modelFormula[p]
-                         modelParamsInfo <- colnames(modelParams)
-                         modelParamsNames <- rownames(modelParams)
-                         modelEstimates[] <- NA
-                         modelStdErrors <- modelEstimates
-                         modeltValues <- modelEstimates
-                         modelPr.gt.ts <- modelEstimates
-                         modelEstimates[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[1]]
-                         modelStdErrors[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[2]]
-                         modeltValues[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[3]]
-                         modelPr.gt.ts[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[4]]
+                         "Li" = {
+                           print("Linear fit found...")
+                           rownames(modelParams) <- c("b", "a")
+                         },
                          
-                         colnames(modelStdErrors) <- paste("StdError_", colnames(modelStdErrors), sep = "")
-                         colnames(modeltValues) <- paste("tValue_", colnames(modeltValues), sep = "")
-                         colnames(modelPr.gt.ts) <- paste("Pr.gt.t_", colnames(modelPr.gt.ts), sep = "")
+                         "Lo" = {
+                           print("Log function found...")
+                           rownames(modelParams) <- c("b", "a")
+                         },
                          
-                         # This generates a dataframe with rownames = model parameter names
-                         
-                         sampleID <- i
-                         finalTemp <- as.numeric(finalPanTemp[i])
-                         sampleMoisture <- as.numeric(finalResult[i])
-                         dryProfile <- dryingProfile[i]
-                         modelAbb <- corrDF$modelAbbr[p]
-                         modelName <- corrDF$modelNames[p]
-                         modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
-                         parserVer <- paste(parserID, parserVersion, sep = "")
-                         modelError <- get(corrDF$modelAbbr[p])[[4]]
-                         
-
-                modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, finalTemp, sampleMoisture, modelAbb, modelName,
+                         {
+                           
+                           # models generated by nls()
+                           
+                         }
+                  )
+                  
+                  modelParamsNames <- rownames(modelParams)
+                  modelEstimates[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[1]]
+                  modelStdErrors[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[2]]
+                  modeltValues[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[3]]
+                  modelPr.gt.ts[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[4]]
+                }
+                
+                colnames(modelStdErrors) <- paste("StdError_", colnames(modelStdErrors), sep = "")
+                colnames(modeltValues) <- paste("tValue_", colnames(modeltValues), sep = "")
+                colnames(modelPr.gt.ts) <- paste("Pr.gt.t_", colnames(modelPr.gt.ts), sep = "")
+                
+                # This generates a dataframe with rownames = model parameter names
+                
+                sampleID <- i
+                dryingTime <- elapsedTime[i]
+                initialTemp <- rawData$temperature[1]
+                finalTemp <- as.numeric(finalPanTemp[i])
+                sampleMass <- as.numeric(finalWeight[i])
+                sampleMoisture <- as.numeric(finalResult[i])
+                dryProfile <- dryingProfile[i]
+                modelAbb <- corrDF$modelAbbr[p]
+                modelName <- corrDF$modelNames[p]
+                modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
+                parserVer <- paste(parserID, parserVersion, sep = "")
+                modelError <- get(corrDF$modelAbbr[p])[[4]]
+                
+                modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
                                               modelCorr, modelEquation,
                                               modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
                 
@@ -931,11 +939,11 @@ for (f in xxx.txt) {
                 } else {
                   modelResults <- rbind(modelResults, modelResultsNew)
                 }
-
+                
                 HTML(paste("Pearson's correlation: ", corrDF$corr[p]), file = HTMLoutput)
                 HTML("<hr>", file = HTMLoutput)                
-               }
-  
+              }
+              
             }
             
             HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
