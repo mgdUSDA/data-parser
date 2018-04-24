@@ -373,19 +373,24 @@ Logarithmic_fit <- function(time, moisture) {
 }
 
 ModifiedHendersonPabis_fit <- function(time,moisture) {
-  tryResult <- tryCatch(nls(moisture ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time), start = list(a = 0.3, b = 0.2, c = 0.4, ka = 0.2, kb = 0.5, kc = 0.3)),
+  
+  nonZero <- which(moisture > 0)
+  moistureNZ <- moisture[nonZero]
+  time <- time[nonZero]
+  
+  tryResult <- tryCatch(nls(moistureNZ ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time), start = list(a = 0.3, b = 0.2, c = 0.4, ka = 0.2, kb = 0.5, kc = 0.3)),
                         error=function(e) {
                           print(e)
                           print(strsplit(as.character(e), ":")[[1]][2])
                         }
   )
   if (class(tryResult) == "nls") {
-    model <- nls(moisture ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time), start = list(a = 0.3, b = 0.2, c = 0.4, ka = 0.2, kb = 0.5, kc = 0.3))
+    model <- nls(moistureNZ ~ a * exp(-ka * time) + b * exp(-kb * time) + c * exp(-kc * time), start = list(a = 0.3, b = 0.2, c = 0.4, ka = 0.2, kb = 0.5, kc = 0.3))
     MHP <- predict(model)
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Modified Henderson Pabis Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, MHP,lty=2,col="red",lwd=3)
     t <- time
-    rsq <- as.numeric(cor(moisture, MHP))
+    rsq <- as.numeric(cor(moistureNZ, MHP))
     err <- NA
   } else {
     model <- NA
