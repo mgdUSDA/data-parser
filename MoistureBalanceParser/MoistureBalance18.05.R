@@ -902,7 +902,7 @@ for (f in xxx.txt) {
                            
                          }
                   )
-                  
+                  modelParamsInfo <- colnames(modelParams)
                   modelParamsNames <- rownames(modelParams)
                   modelEstimates[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[1]]
                   modelStdErrors[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[2]]
