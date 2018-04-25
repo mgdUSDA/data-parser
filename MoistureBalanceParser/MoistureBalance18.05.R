@@ -758,6 +758,9 @@ for (f in xxx.txt) {
             # Use get() to access variable with variable name string.
             
             # Generate wide data frame of predicted data. Fill "missing data with NAs. Append raw data.
+            # Previous versions of this code used the sorted corrDF to generate predictDFW so that the
+            # models were added in decending order of correlation.  In order to append the model data to
+            # the rawData for all data files, the model data is now added in order according to modelAbbr[].
             
             for (j in 1:length(modelAbbr)) {
               corr <- c(corr, round(as.numeric((get(modelAbbr[j])[[3]])), 8))
