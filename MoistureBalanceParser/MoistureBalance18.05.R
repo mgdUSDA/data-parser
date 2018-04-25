@@ -18,6 +18,7 @@ cat("\n Moisture Balance data parser.  ", "Last edited: February 9, 2018.\n\n")
 library(tcltk2)
 library(ggplot2)
 library(R2HTML)
+library(tidyr)
 
 # Clear all variables
 # rm(list = ls())
@@ -762,25 +763,32 @@ for (f in xxx.txt) {
             # models were added in decending order of correlation.  In order to append the model data to
             # the rawData for all data files, the model data is now added in order according to modelAbbr[].
             
+            # Initialize predictDFW[] with time and MR from rawData[]
+            
+            predictDFW <- data.frame(t = rawData$dectime, raw = rawData$MR)            
+            
+            # Check for convergent models based on Pearson correlation coefficients.  If the model did not converge, the correlation is set to NA.
+            
             for (j in 1:length(modelAbbr)) {
               corr <- c(corr, round(as.numeric((get(modelAbbr[j])[[3]])), 8))
             }
             corrDF <- data.frame(corr, modelAbbr, modelNames, stringsAsFactors = FALSE)
-            if (sum(!is.na(corrDF$corr)) < nModels) {
-              nModels <- sum(!is.na(corrDF$corr))
-            }
+            nModels <- sum(!is.na(corrDF$corr))
             if (nModels > 0) {
-              #top <- order(corrDF$corr, decreasing = TRUE)[1:nModels]
+              
+              # Proceed with data processing to generate predictDFW[]
+              
+              # Sort corrDF by Pearson correlation, with NAs last.
+              
               corrDF <- corrDF[order(corrDF$corr, decreasing = TRUE),]
-              for (k in 1:nModels) {
-                time <- get(corrDF$modelAbbr[k])[[2]]
-                p <- predict(get(corrDF$modelAbbr[k])[[1]])
-                if (is.null(predictDFW)) {
-                  predictDFW <- data.frame(time, p)
-                  colnames(predictDFW)[2] <- corrDF$modelAbbr[k]
-                } else {
-                  predictNext <- data.frame(time, p)
-                  colnames(predictNext)[2] <- corrDF$modelAbbr[k]
+              
+              for (k in 1:length(modelAbbr)) {
+                if (!is.na(get(modelAbbr[k])[[2]])) {
+                  t <- get(modelAbbr[k])[[2]]
+                  p <- predict(get(modelAbbr[k])[[1]])
+                  
+                  predictNext <- data.frame(t, p)
+                  colnames(predictNext)[2] <- modelAbbr[k]
                   rowPredDFW <- nrow(predictDFW)
                   rowPredNext <- nrow(predictNext)
                   if (rowPredDFW == rowPredNext) {
@@ -791,229 +799,234 @@ for (f in xxx.txt) {
                       names(m) <- names(predictDFW)
                       predictDFW <- rbind(predictDFW, m)
                     } else {
-                      m <-  data.frame(matrix(NA, nrow = (rowPredDFW - rowPredNext), ncol = ncol(predictNext)))
+                      
+                      # rowPredDFW > rowPredNext
+                      
+                      m <- data.frame(matrix(NA, nrow = (rowPredDFW - rowPredNext), ncol = ncol(predictNext)))
                       names(m) <- names(predictNext)
                       predictNext <- rbind(predictNext, m)
                     }
-                    predictDFW <- cbind(predictDFW, predictNext[2])
                   }
-                }
-              }
-              
-              # Tabulate long data frame with data for top nModels for plotting.
-              
-              for (p in 1:nModels) {
-                time <- get(corrDF$modelAbbr[p])[[2]]
-                MR <- predict(get(corrDF$modelAbbr[p])[[1]])
-                if (is.null(predictDF)) {
-                  predictDF <- data.frame(time, MR, model = corrDF$modelAbbr[p])
-                  
-                } else {
-                  predictDF <- rbind(predictDF, data.frame(time, MR, model = corrDF$modelAbbr[p]))
-                }
-              }
-              
-              # Append raw data to predictDFW
-              
-              predictDFW <- cbind(predictDFW, raw = rawData$MR)
-              
-              tMax <- max(predictDF$time, na.rm = TRUE)
-              mMax <- max(predictDF$MR, na.rm = TRUE)          
-              
-              for (q in 1:nModels) {
-                if (q == 1) {
-                  lFinal <- paste("\n\ncorr_", corrDF$modelAbbr[q], " = ", round(as.numeric(corrDF$corr[q]), 4), sep = "")
-                } else {
-                  lFinal <- paste(lFinal, "\n ", "corr_", corrDF$modelAbbr[q], " = ", round(as.numeric(corrDF$corr[q]), 4), sep = "")
-                }
-              }
-              
-              plotTitle <- paste("Best fit for ", fName, if(nSamples > 1) {paste("[", i, "]", sep = "")}, sep = "")
-              
-              # Set .png file name.
-              
-              if (nSamples > 1) {
-                pngName <- sub(".txt", paste("_", i, "_", parserID, parserVersion,".png", sep = ""), f)
-                modelcsv <- sub(".txt", paste("_", i, "_", parserID, parserVersion,"_model.csv", sep = ""), f)
-              } else {
-                pngName <- sub(".txt", paste("_", parserID, parserVersion,".png", sep = ""), f)
-                modelcsv <- sub(".txt", paste("_", parserID, parserVersion,"_model.csv", sep = ""), f)
-              }
-              
-              HTMLoutput <- paste(dataFolder, sub(".csv", "Rep.html", modelcsv), sep = "/")
-              
-              # Plot raw data and top models
-              
-              plotData <- data.frame(time = rawData$dectime, MR = rawData$MR, model = "raw")
-              png(paste(dataFolder, "/", pngName, sep = ""))
-              g <- ggplot(data=plotData, aes(x=time, y=MR)) +
-                geom_point(size = 2) +
-                geom_line(data=predictDF, aes(x=time, y=MR, color = model), size = 1.5) +
-                ggtitle(plotTitle) +
-                annotate("text", label = lFinal, x = 0.9 * tMax, y = 1.2 * mMax, size = 5, hjust = "right") 
-              print(g)
-              dev.off()
-              
-              HTML("", append = FALSE, file = HTMLoutput)
-              HTML.title(paste("Regression summary info for ", fName, sep = ""), Align = "center", HR = 3, file = HTMLoutput)
-              HTML.title(Sys.time(), Align = "center", HR = 4, file = HTMLoutput)
-              HTML.title(paste("Parser version:", parserVersion), Align = "center", HR = 4, file = HTMLoutput)
-              HTML("<hr>",file = HTMLoutput)
-              HTMLInsertGraph(paste(dataFolder, "/", pngName, sep = ""), file = HTMLoutput, GraphBorder = 3, Align = "center")
-              
-              for (p in 1:nModelResults) {
-                HTML(paste("Model summary for the ",  corrDF$modelNames[p]), file = HTMLoutput)
-                print(paste("Model summary for the ",  corrDF$modelNames[p]))
-                HTML(summary(get(corrDF$modelAbbr[p])[[1]]), file = HTMLoutput)
-                
-                # Extract and collate parameters from nls() and lm() fits
-                
-                print(paste("Model data for",corrDF$modelAbbr[p]))
-                
-                modelEquation <- modelFormula[corrDF$modelAbbr[p] == modelAbbr]
-                modelEstimates[] <- NA
-                modelStdErrors <- modelEstimates
-                modeltValues <- modelEstimates
-                modelPr.gt.ts <- modelEstimates
-                
-                
-                if (is.na(get(corrDF$modelAbbr[p])[[1]][1])) {
-                  
-                  # nls() reported model fitting error. Could be a result of zero moisture. Otherwise results left in initial state of NA.
-                  # Error message reported.
-                  
                 } else {
                   
-                  modelParams <- summary(get(corrDF$modelAbbr[p])[[1]])$coefficients
-                  switch(corrDF$modelAbbr[p][[1]],
-                         
-                         # models generated by lm()
-                         
-                         "Ex" = {
-                           print("Exponential fit found...")
-                           rownames(modelParams) <- c("b", "a")
-                         },
-                         
-                         "Li" = {
-                           print("Linear fit found...")
-                           rownames(modelParams) <- c("b", "a")
-                         },
-                         
-                         "Lo" = {
-                           print("Log function found...")
-                           rownames(modelParams) <- c("b", "a")
-                         },
-                         
-                         {
-                           
-                           # models generated by nls()
-                           
-                         }
-                  )
-                  modelParamsInfo <- colnames(modelParams)
-                  modelParamsNames <- rownames(modelParams)
-                  modelEstimates[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[1]]
-                  modelStdErrors[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[2]]
-                  modeltValues[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[3]]
-                  modelPr.gt.ts[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[4]]
+                  # No model data for modelAbbr[k].
+                  
+                  predictNext <- data.frame(matrix(NA, nrow = rowPredDFW, ncol = 2))
+                  colnames(predictNext)[2] <- modelAbbr[k]
                 }
-                
-                colnames(modelStdErrors) <- paste("StdError_", colnames(modelStdErrors), sep = "")
-                colnames(modeltValues) <- paste("tValue_", colnames(modeltValues), sep = "")
-                colnames(modelPr.gt.ts) <- paste("Pr.gt.t_", colnames(modelPr.gt.ts), sep = "")
-                
-                # This generates a dataframe with rownames = model parameter names
-                
-                sampleID <- i
-                dryingTime <- elapsedTime[i]
-                initialTemp <- rawData$temperature[1]
-                finalTemp <- as.numeric(finalPanTemp[i])
-                sampleMass <- as.numeric(finalWeight[i])
-                sampleMoisture <- as.numeric(finalResult[i])
-                dryProfile <- dryingProfile[i]
-                modelAbb <- corrDF$modelAbbr[p]
-                modelName <- corrDF$modelNames[p]
-                modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
-                parserVer <- paste(parserID, parserVersion, sep = "")
-                modelError <- get(corrDF$modelAbbr[p])[[4]]
-                
-                modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
-                                              modelCorr, modelEquation,
-                                              modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
-                
-                
-                if (is.null(modelResults)) {
-                  modelResults <- modelResultsNew
-                } else {
-                  modelResults <- rbind(modelResults, modelResultsNew)
-                }
-                
-                HTML(paste("Pearson's correlation: ", corrDF$corr[p]), file = HTMLoutput)
-                HTML("<hr>", file = HTMLoutput)                
+                predictDFW <- cbind(predictDFW, predictNext[2])
               }
               
-            }
-            
-            HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
-            HTML("<hr>", file = HTMLoutput)
-            
-            # Compile data in .csv
-            
-            if (i == 1) {
-              
-              # First sample data set in current file
-              
-              sumData <- rawData
             } else {
               
-              # Append next data set from current file to sumData dataframe
+              # No models fit the data.
               
-              sumData <- rbind(sumData, rawData)
+              predictNext <- data.frame(matrix(NA, nrow = nrow(predictDFW), ncol = length(modelAbbr)))
+              colnames(predictNext) <- modelAbbr
+              predictDFW <- cbind(predictDFW, predictNext)
+              
             }
             
-            # Append raw data to predictDF for export
+            # Tabulate long data frame with data for top nModels for plotting.
             
-            predictDF <- rbind(predictDF, plotData)
+            predictDF <- gather(predictDFW, model, MR, -time)
+            tMax <- max(predictDF$time, na.rm = TRUE)
+            mMax <- max(predictDF$MR, na.rm = TRUE)          
             
-            # Export model results for topModels
-            
-            modelOutfile <- paste(dataFolder, modelcsv, sep = "/")
-            write.csv(predictDF, file = modelOutfile, quote = TRUE, row.names = FALSE)
-            
-            # Output sample info to _info.txt
-            
-            cat(infile, testID[i], switchOffMode[i], dryingProfile[i], dryingTemp[i], resultUnits[i],
-                initialWeight[i], finalWeight[i], elapsedTime[i], finalPanTemp[i], finalResult[i],i, sep = ",", file = infoName, append = TRUE)
-            cat("\n", file = infoName, append = TRUE)
-            
-            # Save summary data
-            
-            outfile <- paste(dataFolder, csvName, sep = "/")
-            modFile <- paste(dataFolder, modName, sep = "/")
-            
-            
-            if (!is.null(sumData)) {
-              write.csv(sumData, file = outfile, quote = TRUE, row.names = FALSE)
+            for (q in 1:nModels) {
+              if (q == 1) {
+                lFinal <- paste("\n\ncorr_", corrDF$modelAbbr[q], " = ", round(as.numeric(corrDF$corr[q]), 4), sep = "")
+              } else {
+                lFinal <- paste(lFinal, "\n ", "corr_", corrDF$modelAbbr[q], " = ", round(as.numeric(corrDF$corr[q]), 4), sep = "")
+              }
             }
             
-            # Update parser log
+            plotTitle <- paste("Best fit for ", fName, if(nSamples > 1) {paste("[", i, "]", sep = "")}, sep = "")
             
-            cat(infile, ", ", file = logfName, append = TRUE)
-            cat(outfile, "\n", file = logfName, append = TRUE)
-            cat("\n\nMoistureBalance parsed data written to:\n\n", outfile, "\n")
+            # Set .png file name.
             
-            HTML.title(paste("<a href=file:///", gsub(" ", "%20", modelOutfile) , ">", modelOutfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
-            HTML.title(paste("<a href=file:///", gsub(" ", "%20", outfile) , ">", outfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
-            #HTMLEndFile()
-            write.csv(modelResults, file = modFile, row.names = FALSE)
+            if (nSamples > 1) {
+              pngName <- sub(".txt", paste("_", i, "_", parserID, parserVersion,".png", sep = ""), f)
+              modelcsv <- sub(".txt", paste("_", i, "_", parserID, parserVersion,"_model.csv", sep = ""), f)
+            } else {
+              pngName <- sub(".txt", paste("_", parserID, parserVersion,".png", sep = ""), f)
+              modelcsv <- sub(".txt", paste("_", parserID, parserVersion,"_model.csv", sep = ""), f)
+            }
             
+            HTMLoutput <- paste(dataFolder, sub(".csv", "Rep.html", modelcsv), sep = "/")
+            
+            # Plot raw data and top models
+            
+            plotData <- data.frame(time = rawData$dectime, MR = rawData$MR, model = "raw")
+            png(paste(dataFolder, "/", pngName, sep = ""))
+            g <- ggplot(data=plotData, aes(x=time, y=MR)) +
+              geom_point(size = 2) +
+              geom_line(data=predictDF, aes(x=time, y=MR, color = model), size = 1.5) +
+              ggtitle(plotTitle) +
+              annotate("text", label = lFinal, x = 0.9 * tMax, y = 1.2 * mMax, size = 5, hjust = "right") 
+            print(g)
+            dev.off()
+            
+            HTML("", append = FALSE, file = HTMLoutput)
+            HTML.title(paste("Regression summary info for ", fName, sep = ""), Align = "center", HR = 3, file = HTMLoutput)
+            HTML.title(Sys.time(), Align = "center", HR = 4, file = HTMLoutput)
+            HTML.title(paste("Parser version:", parserVersion), Align = "center", HR = 4, file = HTMLoutput)
+            HTML("<hr>",file = HTMLoutput)
+            HTMLInsertGraph(paste(dataFolder, "/", pngName, sep = ""), file = HTMLoutput, GraphBorder = 3, Align = "center")
+            
+            for (p in 1:nModelResults) {
+              HTML(paste("Model summary for the ",  corrDF$modelNames[p]), file = HTMLoutput)
+              print(paste("Model summary for the ",  corrDF$modelNames[p]))
+              HTML(summary(get(corrDF$modelAbbr[p])[[1]]), file = HTMLoutput)
+              
+              # Extract and collate parameters from nls() and lm() fits
+              
+              print(paste("Model data for",corrDF$modelAbbr[p]))
+              
+              modelEquation <- modelFormula[corrDF$modelAbbr[p] == modelAbbr]
+              modelEstimates[] <- NA
+              modelStdErrors <- modelEstimates
+              modeltValues <- modelEstimates
+              modelPr.gt.ts <- modelEstimates
+              
+              
+              if (is.na(get(corrDF$modelAbbr[p])[[1]][1])) {
+                
+                # nls() reported model fitting error. Could be a result of zero moisture. Otherwise results left in initial state of NA.
+                # Error message reported.
+                
+              } else {
+                
+                modelParams <- summary(get(corrDF$modelAbbr[p])[[1]])$coefficients
+                switch(corrDF$modelAbbr[p][[1]],
+                       
+                       # models generated by lm()
+                       
+                       "Ex" = {
+                         print("Exponential fit found...")
+                         rownames(modelParams) <- c("b", "a")
+                       },
+                       
+                       "Li" = {
+                         print("Linear fit found...")
+                         rownames(modelParams) <- c("b", "a")
+                       },
+                       
+                       "Lo" = {
+                         print("Log function found...")
+                         rownames(modelParams) <- c("b", "a")
+                       },
+                       
+                       {
+                         
+                         # models generated by nls()
+                         
+                       }
+                )
+                modelParamsInfo <- colnames(modelParams)
+                modelParamsNames <- rownames(modelParams)
+                modelEstimates[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[1]]
+                modelStdErrors[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[2]]
+                modeltValues[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[3]]
+                modelPr.gt.ts[modelParamsNames] <- modelParams[modelParamsNames, modelParamsInfo[4]]
+              }
+              
+              colnames(modelStdErrors) <- paste("StdError_", colnames(modelStdErrors), sep = "")
+              colnames(modeltValues) <- paste("tValue_", colnames(modeltValues), sep = "")
+              colnames(modelPr.gt.ts) <- paste("Pr.gt.t_", colnames(modelPr.gt.ts), sep = "")
+              
+              # This generates a dataframe with rownames = model parameter names
+              
+              sampleID <- i
+              dryingTime <- elapsedTime[i]
+              initialTemp <- rawData$temperature[1]
+              finalTemp <- as.numeric(finalPanTemp[i])
+              sampleMass <- as.numeric(finalWeight[i])
+              sampleMoisture <- as.numeric(finalResult[i])
+              dryProfile <- dryingProfile[i]
+              modelAbb <- corrDF$modelAbbr[p]
+              modelName <- corrDF$modelNames[p]
+              modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
+              parserVer <- paste(parserID, parserVersion, sep = "")
+              modelError <- get(corrDF$modelAbbr[p])[[4]]
+              
+              modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
+                                            modelCorr, modelEquation,
+                                            modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
+              
+              
+              if (is.null(modelResults)) {
+                modelResults <- modelResultsNew
+              } else {
+                modelResults <- rbind(modelResults, modelResultsNew)
+              }
+              
+              HTML(paste("Pearson's correlation: ", corrDF$corr[p]), file = HTMLoutput)
+              HTML("<hr>", file = HTMLoutput)                
+            }
+            
+          }
+          
+          HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
+          HTML("<hr>", file = HTMLoutput)
+          
+          # Compile data in .csv
+          
+          if (i == 1) {
+            
+            # First sample data set in current file
+            
+            sumData <- rawData
           } else {
             
-            # There are less than 2 data points in the data file
+            # Append next data set from current file to sumData dataframe
             
-            cat(infile, ", Insufficient data in data file.\n", file = logfName, append = TRUE)
+            sumData <- rbind(sumData, rawData)
           }
+          
+          # Append raw data to predictDF for export
+          
+          predictDF <- rbind(predictDF, plotData)
+          
+          # Export model results for topModels
+          
+          modelOutfile <- paste(dataFolder, modelcsv, sep = "/")
+          write.csv(predictDF, file = modelOutfile, quote = TRUE, row.names = FALSE)
+          
+          # Output sample info to _info.txt
+          
+          cat(infile, testID[i], switchOffMode[i], dryingProfile[i], dryingTemp[i], resultUnits[i],
+              initialWeight[i], finalWeight[i], elapsedTime[i], finalPanTemp[i], finalResult[i],i, sep = ",", file = infoName, append = TRUE)
+          cat("\n", file = infoName, append = TRUE)
+          
+          # Save summary data
+          
+          outfile <- paste(dataFolder, csvName, sep = "/")
+          modFile <- paste(dataFolder, modName, sep = "/")
+          
+          
+          if (!is.null(sumData)) {
+            write.csv(sumData, file = outfile, quote = TRUE, row.names = FALSE)
+          }
+          
+          # Update parser log
+          
+          cat(infile, ", ", file = logfName, append = TRUE)
+          cat(outfile, "\n", file = logfName, append = TRUE)
+          cat("\n\nMoistureBalance parsed data written to:\n\n", outfile, "\n")
+          
+          HTML.title(paste("<a href=file:///", gsub(" ", "%20", modelOutfile) , ">", modelOutfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
+          HTML.title(paste("<a href=file:///", gsub(" ", "%20", outfile) , ">", outfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
+          #HTMLEndFile()
+          write.csv(modelResults, file = modFile, row.names = FALSE)
+          
+        } else {
+          
+          # There are less than 2 data points in the data file
+          
+          cat(infile, ", Insufficient data in data file.\n", file = logfName, append = TRUE)
         }
+        #}
       } else {
         
         # There appears to be a data mismatch in the file
