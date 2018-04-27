@@ -783,16 +783,18 @@ for (f in xxx.txt) {
               corrDF <- corrDF[order(corrDF$corr, decreasing = TRUE),]
               
               for (k in 1:length(modelAbbr)) {
-                if (!is.na(get(modelAbbr[k])[[2]])) {
+                if (!is.na(get(modelAbbr[k])[[2]][1])) {
                   t <- get(modelAbbr[k])[[2]]
                   p <- predict(get(modelAbbr[k])[[1]])
-                  
                   predictNext <- data.frame(t, p)
                   colnames(predictNext)[2] <- modelAbbr[k]
                   rowPredDFW <- nrow(predictDFW)
                   rowPredNext <- nrow(predictNext)
                   if (rowPredDFW == rowPredNext) {
-                    predictDFW <- cbind(predictDFW, predictNext[2])
+                    
+                    # rowPredNext is ready to add to predictDFW without alterations.
+                    
+                    #predictDFW <- cbind(predictDFW, predictNext[2])
                   } else {
                     if (rowPredNext > rowPredDFW) {
                       m <- data.frame(matrix(NA, nrow = (rowPredNext - rowPredDFW), ncol = ncol(predictDFW)))
@@ -824,13 +826,12 @@ for (f in xxx.txt) {
               predictNext <- data.frame(matrix(NA, nrow = nrow(predictDFW), ncol = length(modelAbbr)))
               colnames(predictNext) <- modelAbbr
               predictDFW <- cbind(predictDFW, predictNext)
-              
             }
             
             # Tabulate long data frame with data for top nModels for plotting.
             
-            predictDF <- gather(predictDFW, model, MR, -time)
-            tMax <- max(predictDF$time, na.rm = TRUE)
+            predictDF <- gather(predictDFW, model, MR, -t)
+            tMax <- max(predictDF$t, na.rm = TRUE)
             mMax <- max(predictDF$MR, na.rm = TRUE)          
             
             for (q in 1:nModels) {
@@ -839,7 +840,7 @@ for (f in xxx.txt) {
               } else {
                 lFinal <- paste(lFinal, "\n ", "corr_", corrDF$modelAbbr[q], " = ", round(as.numeric(corrDF$corr[q]), 4), sep = "")
               }
-            }
+            }  #  Not sure the for loop in q needs to end here or not.
             
             plotTitle <- paste("Best fit for ", fName, if(nSamples > 1) {paste("[", i, "]", sep = "")}, sep = "")
             
@@ -857,11 +858,11 @@ for (f in xxx.txt) {
             
             # Plot raw data and top models
             
-            plotData <- data.frame(time = rawData$dectime, MR = rawData$MR, model = "raw")
+            plotData <- data.frame(t = rawData$dectime, MR = rawData$MR, model = "raw")
             png(paste(dataFolder, "/", pngName, sep = ""))
-            g <- ggplot(data=plotData, aes(x=time, y=MR)) +
+            g <- ggplot(data=plotData, aes(x=t, y=MR)) +
               geom_point(size = 2) +
-              geom_line(data=predictDF, aes(x=time, y=MR, color = model), size = 1.5) +
+              geom_line(data=predictDF, aes(x=t, y=MR, color = model), size = 1.5) +
               ggtitle(plotTitle) +
               annotate("text", label = lFinal, x = 0.9 * tMax, y = 1.2 * mMax, size = 5, hjust = "right") 
             print(g)
@@ -953,8 +954,7 @@ for (f in xxx.txt) {
               modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
                                             modelCorr, modelEquation,
                                             modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
-              
-              
+
               if (is.null(modelResults)) {
                 modelResults <- modelResultsNew
               } else {
@@ -965,114 +965,117 @@ for (f in xxx.txt) {
               HTML("<hr>", file = HTMLoutput)                
             }
             
-          }
-          
-          HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
-          HTML("<hr>", file = HTMLoutput)
-          
-          # Compile data in .csv
-          
-          if (i == 1) {
+            HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
+            HTML("<hr>", file = HTMLoutput)
             
-            # First sample data set in current file
+            # Compile data in .csv
             
-            sumData <- rawData
+            sumDataNext <- cbind(rawData, predictDFW)
+            
+            if (i == 1) {
+              
+              # First sample data set in current file
+              
+              sumData <- sumDataNext
+            } else {
+              
+              # Append next data set from current file to sumData dataframe
+              
+              sumData <- rbind(sumData, sumDataNext)
+            }
+            
+            # Append raw data to predictDF for export
+            
+            predictDF <- rbind(predictDF, plotData)
+            
+            # Export model results for topModels
+            
+            modelOutfile <- paste(dataFolder, modelcsv, sep = "/")
+            write.csv(predictDF, file = modelOutfile, quote = TRUE, row.names = FALSE)
+            
+            # Output sample info to _info.txt
+            
+            cat(infile, testID[i], switchOffMode[i], dryingProfile[i], dryingTemp[i], resultUnits[i],
+                initialWeight[i], finalWeight[i], elapsedTime[i], finalPanTemp[i], finalResult[i],i, sep = ",", file = infoName, append = TRUE)
+            cat("\n", file = infoName, append = TRUE)
+            
+            # Save summary data
+            
+            outfile <- paste(dataFolder, csvName, sep = "/")
+            modFile <- paste(dataFolder, modName, sep = "/")
+
+            if (!is.null(sumData)) {
+              write.csv(sumData, file = outfile, quote = TRUE, row.names = FALSE)
+            }
+            
+            # Update parser log
+            
+            cat(infile, ", ", file = logfName, append = TRUE)
+            cat(outfile, "\n", file = logfName, append = TRUE)
+            cat("\n\nMoistureBalance parsed data written to:\n\n", outfile, "\n")
+            
+            HTML.title(paste("<a href=file:///", gsub(" ", "%20", modelOutfile) , ">", modelOutfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
+            HTML.title(paste("<a href=file:///", gsub(" ", "%20", outfile) , ">", outfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
+            #HTMLEndFile()
+            write.csv(modelResults, file = modFile, row.names = FALSE)
+            
           } else {
             
-            # Append next data set from current file to sumData dataframe
+            # There are less than 2 data points in the data file
             
-            sumData <- rbind(sumData, rawData)
+            cat(infile, ", Hey, Requires 2 or more data points to continue.\n", file = logfName, append = TRUE)
           }
           
-          # Append raw data to predictDF for export
-          
-          predictDF <- rbind(predictDF, plotData)
-          
-          # Export model results for topModels
-          
-          modelOutfile <- paste(dataFolder, modelcsv, sep = "/")
-          write.csv(predictDF, file = modelOutfile, quote = TRUE, row.names = FALSE)
-          
-          # Output sample info to _info.txt
-          
-          cat(infile, testID[i], switchOffMode[i], dryingProfile[i], dryingTemp[i], resultUnits[i],
-              initialWeight[i], finalWeight[i], elapsedTime[i], finalPanTemp[i], finalResult[i],i, sep = ",", file = infoName, append = TRUE)
-          cat("\n", file = infoName, append = TRUE)
-          
-          # Save summary data
-          
-          outfile <- paste(dataFolder, csvName, sep = "/")
-          modFile <- paste(dataFolder, modName, sep = "/")
-          
-          
-          if (!is.null(sumData)) {
-            write.csv(sumData, file = outfile, quote = TRUE, row.names = FALSE)
-          }
-          
-          # Update parser log
-          
-          cat(infile, ", ", file = logfName, append = TRUE)
-          cat(outfile, "\n", file = logfName, append = TRUE)
-          cat("\n\nMoistureBalance parsed data written to:\n\n", outfile, "\n")
-          
-          HTML.title(paste("<a href=file:///", gsub(" ", "%20", modelOutfile) , ">", modelOutfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
-          HTML.title(paste("<a href=file:///", gsub(" ", "%20", outfile) , ">", outfile, "</a>", sep = ""), HR = 3, file = HTMLoutput)
-          #HTMLEndFile()
-          write.csv(modelResults, file = modFile, row.names = FALSE)
-          
+        }
         } else {
           
-          # There are less than 2 data points in the data file
+          # There appears to be a data mismatch in the file
           
-          cat(infile, ", Insufficient data in data file.\n", file = logfName, append = TRUE)
+          cat(infile, ", Hey, Data mismatch error.\n", file = logfName, append = TRUE)
         }
-        #}
+        
       } else {
         
-        # There appears to be a data mismatch in the file
+        # The file contains no data
         
-        cat(infile, ", Data mismatch error.\n", file = logfName, append = TRUE)
+        cat(infile, ", Hey, The file has an unexpected format (not MB45 data).\n", file = logfName, append = TRUE)
       }
+      
     } else {
       
-      # The file contains no data
+      # The file has size less or equal to zero
       
-      cat(infile, ", The file does not contain MB45 data.\n", file = logfName, append = TRUE)
+      cat(infile, ", Hey, The file size is less than or equal to zero.\n", file = logfName, append = TRUE)
     }
-  } else {
-    
-    # The file has size less or equal to zero
-    
-    cat(infile, ", The file has size less than or equal to zero.\n", file = logfName, append = TRUE)
   }
-}
 
-#End of data processing
-
-# Cleanup environment
-
-# rm(beginData,chooseMultiple,corr,corrDF,csvName,dataFolder,decimalTime,dectime,dirList,dryingProfile,dryingTemp,elapsedTime,endData,endFlag,Ex,Exp_fit,f,finalPanTemp,
-#    finalResult,finalWeight,fitData,fName,g,HendersonPabis_fit,HP,HTMLoutput, i,infile,infoCount,infoName,initialWeight,j,k,Le,Lewis_fit,lFinal,Li,Linear_fit,Lo,Log_fit,Loga,
-#    Logarithmic_fit,m,mass,MBData,MHP,mMax,modelAbbr,modelcsv,modelNames,modelOutfile,ModifiedHendersonPabis_fit,ModifiedPage_fit,ModifiedPageII_fit,moisture,
-#    MP,MPII,MR,ms,
-#    nModels,nodename,nSamples,OK.but,outfile,p,Pa,Page_fit,parserCounter,parserID,parserVersion,plotData,plotTitle,pngName,predictDF,predictDFW,predictNext,q,
-#    rawData,logfName,logTime,radiobuttondone,rb1,rb2,rbValue,resultUnits,rowPredDFW,rowPredNext,SF,SimplifiedFick_fit,sumData,switchOffMode,testID,time,tMax,
-#    todaysdate,top,tt,Tt,
-#    TwoTerm_fit,WangSingh_fit,WS,xxx.txt)
-
-
-
-#End of data processing
-
-# Cleanup environment
-
-# To generate a list of the variables generated by a script do the following:
-
-# 1) noquote(ls())
-# 2) Copy/Paste output from Console
-# 3) enclose text in double quotes and assign to variable a
-# 4) Execute the following commands in order:
-#       b <- gsub("\\[.+?\\]", "", a)  # Remove square bracket line numbering
-#       c <- gsub("\\s+", " ", b)      # Remove extra spaces between variable names
-#       d <- gsub(" ", ",", c)         # Replace spaces with comma
-# 5) rm(...list of variables in d...)
+  
+  #End of data processing
+  
+  # Cleanup environment
+  
+  # rm(beginData,chooseMultiple,corr,corrDF,csvName,dataFolder,decimalTime,dectime,dirList,dryingProfile,dryingTemp,elapsedTime,endData,endFlag,Ex,Exp_fit,f,finalPanTemp,
+  #    finalResult,finalWeight,fitData,fName,g,HendersonPabis_fit,HP,HTMLoutput, i,infile,infoCount,infoName,initialWeight,j,k,Le,Lewis_fit,lFinal,Li,Linear_fit,Lo,Log_fit,Loga,
+  #    Logarithmic_fit,m,mass,MBData,MHP,mMax,modelAbbr,modelcsv,modelNames,modelOutfile,ModifiedHendersonPabis_fit,ModifiedPage_fit,ModifiedPageII_fit,moisture,
+  #    MP,MPII,MR,ms,
+  #    nModels,nodename,nSamples,OK.but,outfile,p,Pa,Page_fit,parserCounter,parserID,parserVersion,plotData,plotTitle,pngName,predictDF,predictDFW,predictNext,q,
+  #    rawData,logfName,logTime,radiobuttondone,rb1,rb2,rbValue,resultUnits,rowPredDFW,rowPredNext,SF,SimplifiedFick_fit,sumData,switchOffMode,testID,time,tMax,
+  #    todaysdate,top,tt,Tt,
+  #    TwoTerm_fit,WangSingh_fit,WS,xxx.txt)
+  
+  
+  
+  #End of data processing
+  
+  # Cleanup environment
+  
+  # To generate a list of the variables generated by a script do the following:
+  
+  # 1) noquote(ls())
+  # 2) Copy/Paste output from Console
+  # 3) enclose text in double quotes and assign to variable a
+  # 4) Execute the following commands in order:
+  #       b <- gsub("\\[.+?\\]", "", a)  # Remove square bracket line numbering
+  #       c <- gsub("\\s+", " ", b)      # Remove extra spaces between variable names
+  #       d <- gsub(" ", ",", c)         # Replace spaces with comma
+  # 5) rm(...list of variables in d...)
