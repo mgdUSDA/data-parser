@@ -55,8 +55,6 @@ modeltValues <- modelEstimates
 nModels = 13  # Plot and report model results from the top nModels based on cor(moisture, fit)
 nModelResults = 13 
 
-
-
 modelResultsList <- c("date", "time", "datafile", "sample", "dryingProfile", "finalTemp", "moisture", "modelAbbr", "modelName", "correlation",
                       modelParameterList,
                       paste("StdErr_", modelParameterList, sep = ""),
@@ -240,15 +238,17 @@ Exp_fit <- function(time, moisture) {
     # plot(timeNZ, moistureNZ, pch = 16, cex = 1.3, col = "blue", main = "Exponential Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(timeNZ, Ex, lty=2, col="red", lwd=3)
     t <- time
+    w <- Ex
     rsq <- as.numeric(cor(moistureNZ, Ex))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 HendersonPabis_fit <- function(time, moisture) {
@@ -264,15 +264,17 @@ HendersonPabis_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Henderson Pabis Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, HP,lty=2,col="red",lwd=3)
     t <- time
+    w <- HP
     rsq <- as.numeric(cor(moisture, HP))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 Lewis_fit <- function(time, moisture) {
@@ -288,15 +290,17 @@ Lewis_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Lewis Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Le, lty=2, col="red", lwd=3)
     t <- time
+    w <- Le
     rsq <- as.numeric(cor(moisture, Le))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 Linear_fit <- function(time,moisture) {
@@ -312,15 +316,17 @@ Linear_fit <- function(time,moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Linear Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Li, lty=2, col="red", lwd=3)
     t <- time
+    w <- Li
     rsq <- as.numeric(cor(moisture, Li))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 Log_fit <- function(time,moisture) {
@@ -338,15 +344,17 @@ Log_fit <- function(time,moisture) {
     # plot(time, moisture, pch = 16, cex = 1.3, col = "blue", main = "Logarithmic Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Lo, lty=2, col="red", lwd=3)
     t <- time
+    w <- Lo
     rsq <- as.numeric(cor(moisture, Lo))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 Logarithmic_fit <- function(time, moisture) {
@@ -362,15 +370,17 @@ Logarithmic_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Logarithmic Fit (Yagcioglu et al. 1999)", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Loga, lty=2, col="red", lwd=3)
     t <- time
+    w <- Loga
     rsq <- as.numeric(cor(moisture, Loga))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 ModifiedHendersonPabis_fit <- function(time,moisture) {
@@ -391,15 +401,17 @@ ModifiedHendersonPabis_fit <- function(time,moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Modified Henderson Pabis Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, MHP,lty=2,col="red",lwd=3)
     t <- time
+    w <- MHP
     rsq <- as.numeric(cor(moistureNZ, MHP))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 ModifiedPage_fit <- function(time, moisture) {
@@ -415,15 +427,17 @@ ModifiedPage_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Modified Page Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, MP,lty=2,col="red",lwd=3)
     t <- time
+    w <- MP
     rsq <- as.numeric(cor(moisture, MP))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 ModifiedPageII_fit <- function(time, moisture) {
@@ -439,15 +453,17 @@ ModifiedPageII_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = paste("Modified Page II Fit (L = ", L, ")", sep = ""), xlab = "Time (min)", ylab = "Moisture")
     # lines(time, MPII, lty=2, col="red", lwd=3)
     t <- time
+    w <- MPII
     rsq <- as.numeric(cor(moisture, MPII))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 Page_fit <- function(time,moisture) {
@@ -463,15 +479,17 @@ Page_fit <- function(time,moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Page Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Pa,lty=2,col="red",lwd=3)
     t <- time
+    w <- Pa
     rsq <- as.numeric(cor(moisture, Pa))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 SimplifiedFick_fit <- function(time, moisture) {
@@ -487,15 +505,17 @@ SimplifiedFick_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = paste("Simplified Fick Diffusion Fit (L = ", L, ")", sep = ""), xlab = "Time (min)", ylab = "Moisture")
     # lines(time, SF,lty=2,col="red",lwd=3)
     t <- time
+    w <- SF
     rsq <- as.numeric(cor(moisture, SF))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 TwoTerm_fit <- function(time, moisture) {
@@ -511,15 +531,17 @@ TwoTerm_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Two Term Fit (Henderson 1974)", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, Tt, lty=2, col="red", lwd=3)
     t <- time
+    w <- Tt
     rsq <- as.numeric(cor(moisture, Tt))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 WangSingh_fit <- function(time, moisture) {
@@ -535,15 +557,17 @@ WangSingh_fit <- function(time, moisture) {
     # plot(time,moisture, pch = 16, cex = 1.3, col = "blue", main = "Wang and Singh Fit", xlab = "Time (min)", ylab = "Moisture")
     # lines(time, WS, lty=2, col="red", lwd=3)
     t <- time
+    w <- WS
     rsq <- as.numeric(cor(moisture, WS))
     err <- NA
   } else {
     model <- NA
     t <- NA
+    w <- NA
     rsq <- NA
     err <- gsub("[\r\n]", "", tryResult)
   }
-  return(list(model, t, rsq, err))
+  return(list(model, t, w, rsq, err))
 }
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -770,7 +794,7 @@ for (f in xxx.txt) {
             # Check for convergent models based on Pearson correlation coefficients.  If the model did not converge, the correlation is set to NA.
             
             for (j in 1:length(modelAbbr)) {
-              corr <- c(corr, round(as.numeric((get(modelAbbr[j])[[3]])), 8))
+              corr <- c(corr, round(as.numeric((get(modelAbbr[j])[[4]])), 8))
             }
             corrDF <- data.frame(corr, modelAbbr, modelNames, stringsAsFactors = FALSE)
             nModels <- sum(!is.na(corrDF$corr))
@@ -785,7 +809,13 @@ for (f in xxx.txt) {
               for (k in 1:length(modelAbbr)) {
                 if (!is.na(get(modelAbbr[k])[[2]][1])) {
                   t <- get(modelAbbr[k])[[2]]
-                  p <- predict(get(modelAbbr[k])[[1]])
+                  
+                  # As of this version the model output contains the predicted moisture values in position 3 of the list,
+                  # so it is no longer necessary to calculate using predict().
+                  
+                  # p <- predict(get(modelAbbr[k])[[1]])
+                  
+                  p <- get(modelAbbr[k])[[3]]
                   predictNext <- data.frame(t, p)
                   colnames(predictNext)[2] <- modelAbbr[k]
                   rowPredDFW <- nrow(predictDFW)
@@ -861,7 +891,7 @@ for (f in xxx.txt) {
             plotData <- data.frame(t = rawData$dectime, MR = rawData$MR, model = "raw")
             png(paste(dataFolder, "/", pngName, sep = ""))
             g <- ggplot(data=plotData, aes(x=t, y=MR)) +
-              geom_point(size = 2) +
+              geom_point(size = 4) +
               geom_line(data=predictDF, aes(x=t, y=MR, color = model), size = 1.5) +
               ggtitle(plotTitle) +
               annotate("text", label = lFinal, x = 0.9 * tMax, y = 1.2 * mMax, size = 5, hjust = "right") 
@@ -949,7 +979,7 @@ for (f in xxx.txt) {
               modelName <- corrDF$modelNames[p]
               modelCorr <- round(as.numeric(corrDF$corr[p]), 8)
               parserVer <- paste(parserID, parserVersion, sep = "")
-              modelError <- get(corrDF$modelAbbr[p])[[4]]
+              modelError <- get(corrDF$modelAbbr[p])[[5]]
               
               modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
                                             modelCorr, modelEquation,
