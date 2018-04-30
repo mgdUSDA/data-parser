@@ -39,6 +39,9 @@ setClass(Class="nlsfit",
 # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 modelResults <- NULL
+allModelParams <- NULL
+allModelFits <- NULL
+allModelFitsLong <- NULL
 parserID = "MB"
 parserVersion = "18.05"
 parserCounter <- 0
@@ -981,7 +984,7 @@ for (f in xxx.txt) {
               parserVer <- paste(parserID, parserVersion, sep = "")
               modelError <- get(corrDF$modelAbbr[p])[[5]]
               
-              modelResultsNew <- data.frame(todaysdate, logTime, infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
+              modelResultsNew <- data.frame(todaysdate, logTime, datafile = infile, sampleID, dryProfile, dryingTime, initialTemp, finalTemp, sampleMass, sampleMoisture, modelAbb, modelName,
                                             modelCorr, modelEquation,
                                             modelEstimates, modelStdErrors, modeltValues, modelPr.gt.ts, parserVer, modelError)
 
@@ -1000,11 +1003,10 @@ for (f in xxx.txt) {
             
             # Compile data in .csv
             
-            sumDataNext <- cbind(rawData, predictDFW)
             
-            if (i == 1) {
-              
-              # First sample data set in current file
+            sumDataNext <- cbind(rawData, predictDFW, datafile = infile)
+            
+            if (is.null(sumData)) {
               
               sumData <- sumDataNext
             } else {
@@ -1016,7 +1018,11 @@ for (f in xxx.txt) {
             
             # Append raw data to predictDF for export
             
-            predictDF <- rbind(predictDF, plotData)
+            predictDF <- rbind(plotData, predictDF)
+            
+            # Include data path
+            
+            predictDF <- cbind(predictDF, datafile = infile)
             
             # Export model results for topModels
             
@@ -1077,9 +1083,44 @@ for (f in xxx.txt) {
       
       cat(infile, ", Hey, The file size is less than or equal to zero.\n", file = logfName, append = TRUE)
     }
-  }
-
   
+  # Concatenate model results for all datafiles
+  
+  if (is.null(allModelParams)) {
+     allModelParams <- modelResults
+  } else {
+    allModelParams <- rbind(allModelParams, modelResults)
+  }
+  
+  if (is.null(allModelFits)) {
+    allModelFits <- sumData
+  } else {
+    allModelFits <- rbind(allModelFits, sumData)
+  }
+  
+  if (is.null(allModelFitsLong)) {
+    allModelFitsLong <- predictDF
+  } else {
+    allModelFitsLong <- rbind(allModelFitsLong, predictDF)
+  }
+  sumData <- NULL
+ }
+
+# Output model results for all data files.
+
+rootName <- strsplit(dataFolder, "/")[[1]][length(strsplit(dataFolder, "/")[[1]])]
+allModParams <- paste(dataFolder, "/allModelParameters_", rootName, ".csv", sep = "")
+write.csv(allModelParams, file = allModParams, row.names = FALSE)
+
+allModFits <- paste(dataFolder, "/allModelFits_", rootName, ".csv", sep = "")
+write.csv(allModelFits, file = allModFits, row.names = FALSE)
+
+allModFitsLong <- paste(dataFolder, "/allModelFitsLong_", rootName, ".csv", sep = "")
+write.csv(allModelFitsLong, file = allModFitsLong, row.names = FALSE)
+
+
+#write.csv(modelResults, file = modFile, row.names = FALSE)
+
   #End of data processing
   
   # Cleanup environment
@@ -1092,8 +1133,6 @@ for (f in xxx.txt) {
   #    rawData,logfName,logTime,radiobuttondone,rb1,rb2,rbValue,resultUnits,rowPredDFW,rowPredNext,SF,SimplifiedFick_fit,sumData,switchOffMode,testID,time,tMax,
   #    todaysdate,top,tt,Tt,
   #    TwoTerm_fit,WangSingh_fit,WS,xxx.txt)
-  
-  
   
   #End of data processing
   
