@@ -1055,6 +1055,11 @@ for (f in xxx.txt) {
             #HTMLEndFile()
             write.csv(modelResults, file = modFile, row.names = FALSE)
             
+            
+            # *** This is where sumData, predictDFW and predictDF should be updated
+            
+            
+            
           } else {
             
             # There are less than 2 data points in the data file
@@ -1103,7 +1108,13 @@ for (f in xxx.txt) {
   } else {
     allModelFitsLong <- rbind(allModelFitsLong, predictDF)
   }
+  
+  # *** Should predictDF and modelResults also be set to NULL?
+  
+  modelResults <- NULL #
   sumData <- NULL
+  predictDF <- NULL #
+  
  }
 
 # Output model results for all data files.
