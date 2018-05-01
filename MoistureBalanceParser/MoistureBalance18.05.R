@@ -179,9 +179,11 @@ fitData <- function() {
   
   # MPII <- ModifiedPageII_fit(rawData$dectime, rawData$moisture, 0.1)
   
-  L = 0.8
+  k = 0.14
+  L = 0.43
+  n = 1.29
   t <- seq(0, 10, 0.2)
-  m <- exp(-(0.5 * (t / L ^ 2) ^ 0.5))
+  m <- exp(-(k * (t / L ^ 2) ^ n))
   m <- m + rnorm(length(t), 0, 0.1 * sd(m))
   plot(t, m)
   time <- t
@@ -224,6 +226,8 @@ fitData <- function() {
   time <- t
   moisture <- m
 }
+
+# ModifiedPageII_fit(time, moisture)
 
 Exp_fit <- function(time, moisture) {
   nonZero <- which(moisture > 0)
@@ -818,8 +822,8 @@ for (f in xxx.txt) {
                   
                   # p <- predict(get(modelAbbr[k])[[1]])
                   
-                  p <- get(modelAbbr[k])[[3]]
-                  predictNext <- data.frame(t, p)
+                  pred <- get(modelAbbr[k])[[3]]
+                  predictNext <- data.frame(t, pred)
                   colnames(predictNext)[2] <- modelAbbr[k]
                   rowPredDFW <- nrow(predictDFW)
                   rowPredNext <- nrow(predictNext)
@@ -911,11 +915,13 @@ for (f in xxx.txt) {
             for (p in 1:nModelResults) {
               HTML(paste("Model summary for the ",  corrDF$modelNames[p]), file = HTMLoutput)
               print(paste("Model summary for the ",  corrDF$modelNames[p]))
+              
+              # For some reason this stopped working...
               HTML(summary(get(corrDF$modelAbbr[p])[[1]]), file = HTMLoutput)
               
               # Extract and collate parameters from nls() and lm() fits
               
-              print(paste("Model data for",corrDF$modelAbbr[p]))
+              print(paste("Model data for", corrDF$modelAbbr[p]))
               
               modelEquation <- modelFormula[corrDF$modelAbbr[p] == modelAbbr]
               modelEstimates[] <- NA
@@ -998,7 +1004,7 @@ for (f in xxx.txt) {
               HTML("<hr>", file = HTMLoutput)                
             }
             
-            HTML(corrDF, file = HTMLoutput, digits = 8, row.names = FALSE)
+            HTML(paste(corrDF), file = HTMLoutput, digits = 8, row.names = FALSE)
             HTML("<hr>", file = HTMLoutput)
             
             # Compile data in .csv
