@@ -329,3 +329,29 @@ nls(moisture ~ exp(-(k * time) ^ n), start = list(k = 1.185, n = 1.278))
 ```
 
 ### What am I missing?
+
+### What about a subsample of the data
+
+```{r subsample}
+
+subData <- rawData[sort(sample(1:nrow(rawData), 20, replace = FALSE)),]
+
+moisture <- subData$MR
+time <- subData$dectime
+
+head(rawData[, c("dectime", "MR")])
+
+  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (time / L ^ 2) ^ n)),
+                            start = list(k = 0.14, L = 0.43, n = 1.29)),
+                        error=function(e) {
+                          print(e)
+                          print(strsplit(as.character(e), ":")[[1]][2])
+                        }
+  )
+
+plotData <- data.frame(time, moisture)
+
+ggplot(plotData, aes(x = time, y = moisture)) +
+  geom_point(size = 2)
+
+```
