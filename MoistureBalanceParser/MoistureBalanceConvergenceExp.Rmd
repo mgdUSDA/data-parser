@@ -236,9 +236,9 @@ head(rawData[, c("dectime", "MR")])
 ```{r Modified Page}
 
 moisture <- rawData$MR
-time <- rawData$dectime
+t <- rawData$dectime
 
-nls(moisture ~ exp(-(k * time) ^ n), start = list(k = 0.5, n = 0.5))
+nls(moisture ~ exp(-(k * t) ^ n), start = list(k = 0.5, n = 0.5))
 
 ```
 
@@ -247,17 +247,17 @@ nls(moisture ~ exp(-(k * time) ^ n), start = list(k = 0.5, n = 0.5))
 
 ```{r Manual fit MP}
 
-MP_moisture <- exp(-(1.185 * time) ^ 1.278)
+MP_moisture <- exp(-(1.185 * t) ^ 1.278)
 
 cor(MP_moisture, moisture)
 
-plotData <- data.frame(time, moisture, MP_moisture)
+plotData <- data.frame(t, moisture, MP_moisture)
 
 head(plotData)
 
-ggplot(plotData, aes(x = time, y = moisture)) +
+ggplot(plotData, aes(x = t, y = moisture)) +
   geom_point(size = 2) +
-  geom_line(data=plotData, aes(x = time, y = MP_moisture), color = 'darkgreen', size = 1.5)
+  geom_line(data=plotData, aes(x = t, y = MP_moisture), color = 'darkgreen', size = 1.5)
 
 ```
 
@@ -266,19 +266,20 @@ ggplot(plotData, aes(x = time, y = moisture)) +
 ```{r Modified Page II}
 
 moisture <- rawData$MR
-time <- rawData$dectime
+t <- rawData$dectime
 
 head(rawData[, c("dectime", "MR")])
 
-  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (time / L ^ 2) ^ n)),
-                            start = list(k = 0.5, L = 0.1, n = 0.5)),
+  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (t / 0.43 ^ 2) ^ n)),
+                          #  start = list(k = 0.5, L = 0.1, n = 0.5)),
+                            start = list(k = 0.5, n = 0.5)),
                         error=function(e) {
                           print(e)
                           print(strsplit(as.character(e), ":")[[1]][2])
                         }
   )
-
 ```
+  
 
 ### Using MoistureBalanceInteractive, I determined that a good fit is possible with the parameters listed below:
 
@@ -288,11 +289,11 @@ k = 0.14
 L = 0.43
 n = 1.29
 
-MPII_moisture <- exp(-(k * (time / L ^ 2) ^ n))
+MPII_moisture <- exp(-(k * (t / L ^ 2) ^ n))
 
 cor(MPII_moisture, moisture)
 
-plotData <- data.frame(time, moisture, MPII_moisture)
+plotData <- data.frame(t, moisture, MPII_moisture)
 
 head(plotData)
 ```
@@ -301,17 +302,18 @@ head(plotData)
 
 ```{r Manual fit MPII plot}
 
-ggplot(plotData, aes(x = time, y = moisture)) +
+ggplot(plotData, aes(x = t, y = moisture)) +
   geom_point(size = 2) +
-  geom_line(data=plotData, aes(x = time, y = MPII_moisture), color = 'orange', size = 1.5)
+  geom_line(data=plotData, aes(x = t, y = MPII_moisture), color = 'orange', size = 1.5)
 ```
 
 ### Even with starting values given above, nls() still doesn't converge.
 
 ```{r Modified Page II should work}
 
-  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (time / L ^ 2) ^ n)),
-                            start = list(k = 0.14, L = 0.43, n = 1.29)),
+  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (t / 0.43 ^ 2) ^ n)),
+                            start = list(k = 0.14, n = 1.29)),
+                          #  start = list(k = 0.14, L = 0.43, n = 1.29)),
                         error=function(e) {
                           print(e)
                           print(strsplit(as.character(e), ":")[[1]][2])
@@ -324,34 +326,38 @@ ggplot(plotData, aes(x = time, y = moisture)) +
 
 ```{r Modified Page should work}
 
-nls(moisture ~ exp(-(k * time) ^ n), start = list(k = 1.185, n = 1.278))
+nls(moisture ~ exp(-(k * t) ^ n), start = list(k = 1.185, n = 1.278))
 
 ```
 
-### What am I missing?
+### One possible explanation is that there are "too many" possible solutions given the 3 fitting parmeters.  If we only use 2 parameters:
 
-### What about a subsample of the data
+```{r fewer parameters}
 
-```{r subsample}
+moisture <- rawData$MR
+t <- rawData$dectime
 
-subData <- rawData[sort(sample(1:nrow(rawData), 20, replace = FALSE)),]
+nls(moisture ~ exp(-(k * (t / 0.1 ^ 2) ^ n)), start = list(k = 0.5, n = 0.5))
 
-moisture <- subData$MR
-time <- subData$dectime
+```
 
-head(rawData[, c("dectime", "MR")])
+### Self starting?
 
-  tryResult <- tryCatch(nls(moisture ~ exp(-(k * (time / L ^ 2) ^ n)),
-                            start = list(k = 0.14, L = 0.43, n = 1.29)),
-                        error=function(e) {
-                          print(e)
-                          print(strsplit(as.character(e), ":")[[1]][2])
-                        }
-  )
+```{r MPII self starting}
 
-plotData <- data.frame(time, moisture)
+# k = 0.5
+# L = 0.1
+# n = 0.5
 
-ggplot(plotData, aes(x = time, y = moisture)) +
-  geom_point(size = 2)
+partial <- seq(1, length(rawData$MR), 5)
+
+moisture <- rawData$MR[partial]
+t <- rawData$dectime[partial]
+
+fixed_k <- nls(moisture ~ exp(-(0.5 * (t / L ^ 2) ^ n)), start = c(L = 0.1, n = 0.5))
+fixed_L <- nls(moisture ~ exp(-(k * (t / 0.1 ^ 2) ^ n)), start = c(k = 0.5, n = 0.5))
+fixed_n <- nls(moisture ~ exp(-(k * (t / L ^ 2) ^ 0.5)), start = c(k = 0.5, L = 0.1))
+
+nls(moisture ~ exp(-(k * (t / L ^ 2) ^ n)), start = c(k = -0.1, L = 0.7, n = 1.28), warnOnly = TRUE)
 
 ```
